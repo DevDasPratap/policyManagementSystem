@@ -1,0 +1,19 @@
+1. Upload CSV File
+POST http://localhost:3000/api/upload
+Payload Type: multipart/form-data
+file: (select .csv file)
+
+2. Search Policies by Username
+GET http://localhost:3000/api/policy/search/Vergie
+
+3. Aggregate Policies by User
+GET http://localhost:3000/api/policy/aggregate
+
+4. Schedule a Post
+POST http://localhost:3000/api/post/schedule
+
+{
+  "message": "Reminder: Policy renewal tomorrow",
+  "day": "Monday",
+  "time": "14:30"
+}
