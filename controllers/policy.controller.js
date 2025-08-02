@@ -24,36 +24,77 @@ export const getPolicyAggregateByUser = async (req, res) => {
     const db = getDB();
 
     const aggregation = await db.collection('policies').aggregate([
+      // First stage: Filter out documents without userId
+      {
+        $match: {
+          userId: { $exists: true, $ne: null }
+        }
+      },
+      // Group by userId
       {
         $group: {
-          _id: '$userEmail',
+          _id: '$userId',
           totalPolicies: { $sum: 1 },
-        },
+          samplePolicies: { $push: '$policyNumber' }
+        }
       },
+      // Lookup user details
       {
         $lookup: {
           from: 'users',
           localField: '_id',
-          foreignField: 'email',
-          as: 'user',
-        },
+          foreignField: '_id', // Now matching ObjectID to ObjectID
+          as: 'userInfo'
+        }
       },
+      // Unwind userInfo
       {
-        $unwind: '$user',
+        $unwind: {
+          path: '$userInfo',
+          preserveNullAndEmptyArrays: true
+        }
       },
+      // Project the final output
       {
         $project: {
           _id: 0,
-          user: '$user.firstName',
+          userEmail: '$userInfo.email', // Get email from user document
+          user: {
+            $ifNull: [
+              '$userInfo.firstName',
+              'Unknown User'
+            ]
+          },
           totalPolicies: 1,
-        },
+          samplePolicyNumbers: { $slice: ['$samplePolicies', 3] }
+        }
       },
+      // Sort by policy count (descending)
+      {
+        $sort: { totalPolicies: -1 }
+      }
     ]).toArray();
 
+    // Get statistics about policies without users
+    const policiesWithoutUser = await db.collection('policies').countDocuments({
+      userId: { $exists: false }
+    });
 
-    res.json({ success: true, data: aggregation });
+    res.json({
+      success: true,
+      data: aggregation,
+      metadata: {
+        totalMatchedPolicies: aggregation.reduce((sum, item) => sum + item.totalPolicies, 0),
+        policiesWithoutUser: policiesWithoutUser,
+        uniqueUsersWithPolicies: aggregation.length
+      }
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: 'Error aggregating policies' });
+    res.status(500).json({
+      success: false,
+      message: 'Error aggregating policies',
+      error: err.message
+    });
   }
 };
