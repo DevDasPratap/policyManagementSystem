@@ -8,8 +8,8 @@ This project provides a Node.js-based backend system to upload insurance policy 
 
 ### 1. **Clone the Repository**
 ```bash
-git clone <your-repo-url>
-cd <project-folder>
+git clone https://github.com/DevDasPratap/policyManagementSystem.git
+cd policyManagementSystem
 ```
 ### 2. Install Dependencies
 
